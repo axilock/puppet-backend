@@ -767,6 +767,17 @@ let sortOrder = 'desc';
             // Parse URL parameters
             const urlParams = new URLSearchParams(window.location.search);
             currentStatus = urlParams.get('status') || '';
+            const taskId = urlParams.get('task_id');
+            
+            // If task_id is provided, view task details
+            if (taskId) {
+                currentTaskId = taskId;
+                // Show task detail container and hide task list container after a short delay
+                // to ensure the DOM is fully loaded
+                setTimeout(() => {
+                    viewTaskDetails(taskId);
+                }, 100);
+            }
             
             // Update status filter
             if (currentStatus) {

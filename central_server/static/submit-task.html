@@ -328,9 +328,9 @@
                         
                         showFlashMessage(`Task submitted successfully. Task ID: ${result.task_id}`, 'success');
                         
-                        // Redirect to task detail page after a delay
+                        // Redirect to tasks page with task_id parameter after a delay
                         setTimeout(() => {
-                            window.location.href = `task-detail.html?task_id=${result.task_id}`;
+                            window.location.href = `tasks.html?task_id=${result.task_id}`;
                         }, 2000);
                         
                     } catch (error) {
