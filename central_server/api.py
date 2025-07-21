@@ -124,16 +124,18 @@ async def create_task(task_input: TaskInput, username: str = Depends(verify_auth
         # Store the task in the database
         db_client.create_task(task)
         
-        # Add the task to the Celery queue
+
         task_data = task.dict()
+
         celery_app.send_task(
-            'distributed_task_system.worker.tasks.process_task',
+            'tasks.process_task',       # Task name to execute
             kwargs={
                 'task_data': task_data,
                 'worker_id': None, 
-                'task_type': task.type
+                'task_type': task.type 
             },
-            queue=task.type
+            queue=task.type             # Message gets placed in the queue named task.type (e.g., "image_processing" queue)
+
         )
         
         logger.info(f"Task {task_id} created and added to queue {task.type}")

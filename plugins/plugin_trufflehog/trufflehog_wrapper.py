@@ -12,12 +12,9 @@ def main():
     
     repo_url = params.get('repo_url')
     scan_type = params.get('scan_type', 'github')
-
-    print("??", params, repo_url, scan_type)
     
     # Run TruffleHog
     cmd = ['trufflehog', scan_type, '--repo', repo_url, '--force-skip-binaries', '--force-skip-archives'  , '--json']
-    print(cmd)
     
     try:
         result = subprocess.run(cmd, capture_output=True, text=True, check=True)
