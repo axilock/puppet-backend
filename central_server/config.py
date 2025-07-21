@@ -21,6 +21,10 @@ MONGO_DB_NAME = os.getenv('MONGO_DB_NAME', 'task_processing_system')
 API_HOST = os.getenv('API_HOST', '0.0.0.0')
 API_PORT = int(os.getenv('API_PORT', 8000))
 
+# Authentication configuration
+AUTH_USERNAME = os.getenv('AUTH_USERNAME', 'admin')
+AUTH_PASSWORD = os.getenv('AUTH_PASSWORD', 'securepassword')
+
 # Queue names
 QUEUE_NAMES = { 'default': 'default_queue' }
 

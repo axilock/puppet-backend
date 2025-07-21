@@ -3,11 +3,14 @@ FastAPI server for the central task processing system.
 """
 import logging
 import uuid
+import secrets
+import base64
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 
-from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Body
+from fastapi import FastAPI, HTTPException, BackgroundTasks, Depends, Body, Request, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 import sys
 import os
@@ -20,11 +23,13 @@ try:
     from models import Task, Worker, Plugin, TaskInput, TaskResult, WorkerMetrics, WorkerResources, WorkerStatus
     from db import db_client
     from celery_app import app as celery_app
+    from config import AUTH_USERNAME, AUTH_PASSWORD
 except ImportError:
     # Fall back to absolute imports (for module import)
     from .models import Task, Worker, Plugin, TaskInput, TaskResult, WorkerMetrics, WorkerResources, WorkerStatus
     from .db import db_client
     from .celery_app import app as celery_app
+    from .config import AUTH_USERNAME, AUTH_PASSWORD
 
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
@@ -35,6 +40,23 @@ logger = logging.getLogger(__name__)
 
 # Create FastAPI app
 app = FastAPI(title="Distributed Task Processing API")
+
+# Setup HTTP Basic Auth
+security = HTTPBasic()
+
+def verify_auth(credentials: HTTPBasicCredentials = Depends(security)):
+    """Verify HTTP Basic Auth credentials."""
+    # Compare with credentials from config
+    is_username_correct = secrets.compare_digest(credentials.username, AUTH_USERNAME)
+    is_password_correct = secrets.compare_digest(credentials.password, AUTH_PASSWORD)
+    
+    if not (is_username_correct and is_password_correct):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid credentials",
+            headers={"WWW-Authenticate": "Basic"},
+        )
+    return credentials.username
 
 # Helper function to get the static directory path
 def get_static_dir():
@@ -64,19 +86,19 @@ app.add_middleware(
 )
 
 @app.get("/", response_class=FileResponse)
-async def serve_index():
+async def serve_index(username: str = Depends(verify_auth)):
     static_dir = get_static_dir()
     return FileResponse(f"{static_dir}/index.html")
 
 @app.get("/{filename}.html", response_class=FileResponse)
-async def serve_html_file(filename: str):
+async def serve_html_file(filename: str, username: str = Depends(verify_auth)):
     static_dir = get_static_dir()
     file_path = f"{static_dir}/{filename}.html"
     return FileResponse(file_path)
 
 # Task submission endpoints
 @app.post("/api/tasks", response_model=Dict[str, str])
-async def create_task(task_input: TaskInput):
+async def create_task(task_input: TaskInput, username: str = Depends(verify_auth)):
     """Create a new task and add it to the queue."""
     try:
         # Create a unique ID for the task
@@ -117,7 +139,7 @@ async def create_task(task_input: TaskInput):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/tasks/{task_id}", response_model=Dict[str, Any])
-async def get_task(task_id: str):
+async def get_task(task_id: str, username: str = Depends(verify_auth)):
     """Get a task by ID."""
     # The get_task method in db.py already excludes _id
     task = db_client.get_task(task_id)
@@ -132,7 +154,8 @@ async def list_tasks(
     limit: int = 100,
     skip: int = 0,
     sort: str = "created_at",
-    order: str = "desc"
+    order: str = "desc",
+    username: str = Depends(verify_auth)
 ):
     """List tasks with optional filtering."""
     query = {}
@@ -157,7 +180,7 @@ async def list_tasks(
 
 # Worker endpoints
 @app.post("/api/workers/register", response_model=Dict[str, str])
-async def register_worker(worker: Worker):
+async def register_worker(worker: Worker, username: str = Depends(verify_auth)):
     """Register a new worker or update an existing one."""
     try:
         worker_id = db_client.register_worker(worker)
@@ -171,7 +194,8 @@ async def register_worker(worker: Worker):
 async def worker_heartbeat(
     worker_id: str,
     status: str = Body(...),  
-    resources: dict = Body(...)   
+    resources: dict = Body(...),
+    username: str = Depends(verify_auth)
 ):
     """Update a worker's heartbeat and status."""
     try:
@@ -190,7 +214,7 @@ async def worker_heartbeat(
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/workers", response_model=List[Dict[str, Any]])
-async def list_workers(status: Optional[str] = None):
+async def list_workers(status: Optional[str] = None, username: str = Depends(verify_auth)):
     """List all workers, optionally filtered by status."""
     try:
         query = {}
@@ -205,7 +229,7 @@ async def list_workers(status: Optional[str] = None):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/workers/{worker_id}", response_model=Dict[str, Any])
-async def get_worker(worker_id: str):
+async def get_worker(worker_id: str, username: str = Depends(verify_auth)):
     """Get a worker by ID."""
     # The get_worker method in db.py already excludes _id with {"_id": 0}
     worker = db_client.get_worker(worker_id)
@@ -214,7 +238,7 @@ async def get_worker(worker_id: str):
     return worker
 
 @app.post("/api/workers/{worker_id}/queues")
-async def update_worker_queues(worker_id: str, queues: List[str]):
+async def update_worker_queues(worker_id: str, queues: List[str], username: str = Depends(verify_auth)):
     """Update the queues a worker consumes from."""
     try:
         result = db_client.workers.update_one(
@@ -230,7 +254,7 @@ async def update_worker_queues(worker_id: str, queues: List[str]):
 
 # Plugin endpoints
 @app.post("/api/plugins", response_model=Dict[str, str])
-async def register_plugin(plugin: Plugin):
+async def register_plugin(plugin: Plugin, username: str = Depends(verify_auth)):
     """Register a new plugin or update an existing one."""
     try:
         # Generate a UUID for the plugin ID if not provided or empty
@@ -246,7 +270,7 @@ async def register_plugin(plugin: Plugin):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/plugins", response_model=List[Dict[str, Any]])
-async def list_plugins():
+async def list_plugins(username: str = Depends(verify_auth)):
     """List all plugins (latest version of each)."""
     try:
         # The get_all_plugins method in db.py already excludes _id
@@ -257,7 +281,7 @@ async def list_plugins():
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/plugins/{plugin_id}", response_model=Dict[str, Any])
-async def get_plugin(plugin_id: str, version: Optional[str] = None):
+async def get_plugin(plugin_id: str, version: Optional[str] = None, username: str = Depends(verify_auth)):
     """Get a plugin by ID and optionally version."""
     # The get_plugin method in db.py already excludes _id
     plugin = db_client.get_plugin(plugin_id, version)
@@ -267,7 +291,7 @@ async def get_plugin(plugin_id: str, version: Optional[str] = None):
 
 # Task result endpoints
 @app.post("/api/results", response_model=Dict[str, str])
-async def submit_task_result(result: TaskResult):
+async def submit_task_result(result: TaskResult, username: str = Depends(verify_auth)):
     """Submit the result of a completed task."""
     try:
         success = db_client.store_task_result(result)
@@ -279,7 +303,7 @@ async def submit_task_result(result: TaskResult):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/results/{task_id}", response_model=Dict[str, Any])
-async def get_task_result(task_id: str):
+async def get_task_result(task_id: str, username: str = Depends(verify_auth)):
     """Get the result for a task."""
     # The get_task_result method in db.py already excludes _id
     result = db_client.get_task_result(task_id)
@@ -292,7 +316,8 @@ async def update_task_status(
     task_id: str,
     status: str = Body(...),
     worker_id: Optional[str] = Body(None),
-    started_at: Optional[datetime] = Body(None)
+    started_at: Optional[datetime] = Body(None),
+    username: str = Depends(verify_auth)
 ):
     """Update the status of a task."""
     try:
@@ -321,7 +346,7 @@ async def update_task_status(
 
 # Metrics endpoints
 @app.post("/api/metrics/worker", response_model=Dict[str, str])
-async def submit_worker_metrics(metrics: WorkerMetrics):
+async def submit_worker_metrics(metrics: WorkerMetrics, username: str = Depends(verify_auth)):
     """Submit metrics from a worker."""
     try:
         success = db_client.store_worker_metrics(metrics)
@@ -333,7 +358,7 @@ async def submit_worker_metrics(metrics: WorkerMetrics):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/metrics/worker/{worker_id}", response_model=List[Dict[str, Any]])
-async def get_worker_metrics(worker_id: str, limit: int = 100):
+async def get_worker_metrics(worker_id: str, limit: int = 100, username: str = Depends(verify_auth)):
     """Get recent metrics for a worker."""
     try:
         # The get_worker_metrics method in db.py already excludes _id
@@ -345,7 +370,7 @@ async def get_worker_metrics(worker_id: str, limit: int = 100):
 
 # System status endpoint
 @app.get("/api/status", response_model=Dict[str, Any])
-async def get_system_status():
+async def get_system_status(username: str = Depends(verify_auth)):
     """Get overall system status."""
     try:
         # Get counts of tasks by status
@@ -375,7 +400,7 @@ async def get_system_status():
 
 # Health check endpoint
 @app.get("/health")
-async def health_check():
+async def health_check(username: str = Depends(verify_auth)):
     """Health check endpoint."""
     return {"status": "healthy"}
 
