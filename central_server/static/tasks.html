@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tasks - Distributed Task Processing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+            width: 240px; /* Fixed width */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px; /* This should match the sidebar width */
+            padding: 20px;
+            flex: 1;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .flash-messages {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        .task-card {
+            transition: transform 0.2s;
+        }
+        .task-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .status-badge {
+            font-size: 0.9rem;
+            padding: 0.4rem 0.6rem;
+        }
+        .task-detail-container {
+            display: none;
+        }
+        .task-list-container {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Task Processing System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="tasks.html">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="workers.html">Workers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="plugins.html">Plugins</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="tasks.html">
+                                <i class="fas fa-tasks me-2"></i>
+                                All Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html?status=pending">
+                                <i class="fas fa-clock me-2"></i>
+                                Pending Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html?status=in_process">
+                                <i class="fas fa-spinner me-2"></i>
+                                In-Process Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html?status=completed">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Completed Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html?status=failed">
+                                <i class="fas fa-times-circle me-2"></i>
+                                Failed Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html?status=manual_review">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Manual Review
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="workers.html">
+                                <i class="fas fa-server me-2"></i>
+                                All Workers
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="plugins.html">
+                                <i class="fas fa-puzzle-piece me-2"></i>
+                                Plugins
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="register-plugin.html">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Register Plugin
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="plugins.html">
+                                <i class="fas fa-plus me-2"></i>
+                                Submit New Task
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Flash messages -->
+                <div class="flash-messages" id="flash-messages">
+                    <!-- Flash messages will be dynamically added here -->
+                </div>
+
+                <!-- Task List Container -->
+                <div id="task-list-container" class="task-list-container">
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1 id="task-list-title">All Tasks</h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-btn">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary" id="action-btn">
+                                    <i class="fas fa-plus"></i> New Task
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Filter controls -->
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="search-input" placeholder="Search tasks...">
+                                <button class="btn btn-outline-secondary" type="button" id="search-btn">
+                                    <i class="fas fa-search"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="type-filter">
+                                <option value="">All Types</option>
+                                <!-- Types will be populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="col-md-3">
+                            <select class="form-select" id="status-filter">
+                                <option value="">All Statuses</option>
+                                <option value="pending">Pending</option>
+                                <option value="in_process">In Process</option>
+                                <option value="completed">Completed</option>
+                                <option value="failed">Failed</option>
+                                <option value="manual_review">Manual Review</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tasks table -->
+                    <div class="card">
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-striped table-hover" id="tasks-table">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Type</th>
+                                            <th>Status</th>
+                                            <th>Plugin</th>
+                                            <th>Worker</th>
+                                            <th>Created</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="tasks-table-body">
+                                        <tr>
+                                            <td colspan="7" class="text-center">
+                                                <div class="spinner-border text-primary" role="status">
+                                                    <span class="visually-hidden">Loading...</span>
+                                                </div>
+                                                <p class="mt-2">Loading tasks...</p>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Pagination -->
+                    <nav aria-label="Task pagination" class="mt-4">
+                        <ul class="pagination justify-content-center" id="pagination">
+                            <!-- Pagination will be dynamically added here -->
+                        </ul>
+                    </nav>
+                </div>
+
+                <!-- Task Detail Container -->
+                <div id="task-detail-container" class="task-detail-container">
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="#" id="back-to-tasks">Tasks</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Task Details</li>
+                        </ol>
+                    </nav>
+
+                    <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                        <h1>Task Details</h1>
+                        <div class="btn-toolbar mb-2 mb-md-0">
+                            <div class="btn-group me-2">
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="refresh-detail-btn">
+                                    <i class="fas fa-sync-alt"></i> Refresh
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-secondary" id="back-btn">
+                                    <i class="fas fa-arrow-left"></i> Back
+                                </button>
+                                <a href="#" class="btn btn-sm btn-outline-success" id="new-task-btn">
+                                    <i class="fas fa-plus"></i> New Task
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div id="task-detail-content">
+                        <!-- Task details will be dynamically added here -->
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading task details...</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+// Global state
+let currentPage = 1;
+let pageSize = 10;
+let totalTasks = 0;
+let currentStatus = '';
+let currentType = '';
+let currentSearch = '';
+let currentTaskId = '';
+let sortField = 'created_at';
+let sortOrder = 'desc';
+        
+        // Helper functions
+        function showFlashMessage(message, category = 'info') {
+            const flashContainer = document.getElementById('flash-messages');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${category} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            flashContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.classList.remove('show');
+                    setTimeout(() => alertElement.remove(), 150);
+                }
+            }, 5000);
+        }
+        
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'pending': return 'primary';
+                case 'in_process': return 'warning';
+                case 'completed': return 'success';
+                case 'failed': return 'danger';
+                case 'manual_review': return 'secondary';
+                default: return 'info';
+            }
+        }
+        
+        function formatDate(dateString) {
+            if (!dateString) return 'N/A';
+            return new Date(dateString).toLocaleString();
+        }
+        
+        function truncateId(id) {
+            if (id && id.length > 8) {
+                return id.substring(0, 8) + '...';
+            }
+            return id || 'N/A';
+        }
+        
+        // API functions
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                showFlashMessage(error.message, 'danger');
+                throw error;
+            }
+        }
+        
+        // Task list functions
+        async function loadTasks() {
+            try {
+                document.getElementById('tasks-table-body').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading tasks...</p>
+                        </td>
+                    </tr>
+                `;
+                
+                // Get total count for pagination
+                let countEndpoint = `/status`;
+                const statusData = await fetchAPI(countEndpoint);
+                
+                if (currentStatus) {
+                    totalTasks = statusData.tasks[currentStatus] || 0;
+                } else {
+                    // Sum all task counts
+                    totalTasks = Object.values(statusData.tasks).reduce((sum, count) => sum + count, 0);
+                }
+                
+                // Build endpoint for tasks with sorting and pagination
+                let endpoint = `/tasks?limit=${pageSize}&skip=${(currentPage - 1) * pageSize}`;
+                
+                if (currentStatus) {
+                    endpoint += `&status=${currentStatus}`;
+                }
+                
+                if (currentType) {
+                    endpoint += `&type=${currentType}`;
+                }
+                
+                // Sort by created_at by default
+                endpoint += `&sort=${sortField}&order=${sortOrder}`;
+                
+                const tasks = await fetchAPI(endpoint);
+                
+                // Update task list title
+                let titleText = currentStatus ? 
+                    `${currentStatus.charAt(0).toUpperCase() + currentStatus.slice(1)} Tasks` : 
+                    'All Tasks';
+                document.getElementById('task-list-title').textContent = titleText;
+                
+                // Update table
+                if (tasks.length === 0) {
+                    document.getElementById('tasks-table-body').innerHTML = `
+                        <tr>
+                            <td colspan="7" class="text-center">No tasks found</td>
+                        </tr>
+                    `;
+                } else {
+                    const tableHtml = tasks.map(task => {
+                        // For completed tasks, show "Show Results" instead of "New Task"
+                        const actionButton = currentStatus === 'completed' ? 
+                            `<button class="btn btn-sm btn-outline-info show-results-btn" data-task-id="${task.id}">
+                                <i class="fas fa-chart-bar"></i> Show Results
+                            </button>` : 
+                            `<a href="submit-task.html?plugin_id=${task.plugin_id}" class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-plus"></i> New Task
+                            </a>`;
+                            
+                        return `
+                            <tr class="task-row" data-task-id="${task.id}">
+                                <td title="${task.id}">${truncateId(task.id)}</td>
+                                <td>${task.type}</td>
+                                <td>
+                                    <span class="badge bg-${getStatusBadgeClass(task.status)} status-badge">${task.status}</span>
+                                </td>
+                                <td title="${task.plugin_id}">${truncateId(task.plugin_id)}</td>
+                                <td title="${task.worker_id || 'Not assigned'}">${truncateId(task.worker_id) || 'Not assigned'}</td>
+                                <td>${formatDate(task.created_at)}</td>
+                                <td>
+                                    <div class="btn-group">
+                                        <button class="btn btn-sm btn-outline-primary view-task-btn" data-task-id="${task.id}">
+                                            <i class="fas fa-info-circle"></i> Details
+                                        </button>
+                                        ${actionButton}
+                                    </div>
+                                </td>
+                            </tr>
+                        `;
+                    }).join('');
+                    
+                    document.getElementById('tasks-table-body').innerHTML = tableHtml;
+                    
+                    // Add event listeners to view buttons
+                    document.querySelectorAll('.view-task-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const taskId = e.currentTarget.getAttribute('data-task-id');
+                            viewTaskDetails(taskId);
+                        });
+                    });
+                    
+                    // Add event listeners to task rows
+                    document.querySelectorAll('.task-row').forEach(row => {
+                        row.addEventListener('click', (e) => {
+                            if (!e.target.closest('.btn')) {
+                                const taskId = row.getAttribute('data-task-id');
+                                viewTaskDetails(taskId);
+                            }
+                        });
+                    });
+                }
+                
+                // Update pagination
+                updatePagination();
+                
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+                document.getElementById('tasks-table-body').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="text-center text-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i>
+                            Error loading tasks: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+        
+        function updatePagination() {
+            const totalPages = Math.ceil(totalTasks / pageSize);
+            let paginationHtml = '';
+            
+            // Previous button
+            paginationHtml += `
+                <li class="page-item ${currentPage === 1 ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage - 1}" aria-label="Previous">
+                        <span aria-hidden="true">&laquo;</span>
+                    </a>
+                </li>
+            `;
+            
+            // Page numbers
+            for (let i = 1; i <= totalPages; i++) {
+                if (i === 1 || i === totalPages || (i >= currentPage - 2 && i <= currentPage + 2)) {
+                    paginationHtml += `
+                        <li class="page-item ${i === currentPage ? 'active' : ''}">
+                            <a class="page-link" href="#" data-page="${i}">${i}</a>
+                        </li>
+                    `;
+                } else if (i === currentPage - 3 || i === currentPage + 3) {
+                    paginationHtml += `
+                        <li class="page-item disabled">
+                            <a class="page-link" href="#">...</a>
+                        </li>
+                    `;
+                }
+            }
+            
+            // Next button
+            paginationHtml += `
+                <li class="page-item ${currentPage === totalPages ? 'disabled' : ''}">
+                    <a class="page-link" href="#" data-page="${currentPage + 1}" aria-label="Next">
+                        <span aria-hidden="true">&raquo;</span>
+                    </a>
+                </li>
+            `;
+            
+            document.getElementById('pagination').innerHTML = paginationHtml;
+            
+            // Add event listeners to pagination links
+            document.querySelectorAll('#pagination .page-link').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const page = parseInt(e.currentTarget.getAttribute('data-page'));
+                    if (!isNaN(page) && page !== currentPage && page > 0 && page <= totalPages) {
+                        currentPage = page;
+                        loadTasks();
+                    }
+                });
+            });
+        }
+        
+        // Task detail functions
+        async function viewTaskDetails(taskId) {
+            currentTaskId = taskId;
+            
+            // Show task detail container and hide task list container
+            document.getElementById('task-list-container').style.display = 'none';
+            document.getElementById('task-detail-container').style.display = 'block';
+            
+            await loadTaskDetails();
+        }
+        
+        async function loadTaskDetails() {
+            try {
+                document.getElementById('task-detail-content').innerHTML = `
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading task details...</p>
+                    </div>
+                `;
+                
+                const task = await fetchAPI(`/tasks/${currentTaskId}`);
+                
+                let resultHtml = '';
+                if (task.status === 'completed' || task.status === 'failed') {
+                    try {
+                        const result = await fetchAPI(`/results/${currentTaskId}`);
+                        resultHtml = `
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Task Result</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <h6 class="text-muted">Success</h6>
+                                                <p>${result.success ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>'}</p>
+                                            </div>
+                                            
+                                            ${result.error ? `
+                                                <div class="mb-3">
+                                                    <h6 class="text-muted">Error</h6>
+                                                    <div class="alert alert-danger">${result.error}</div>
+                                                </div>
+                                            ` : ''}
+                                            
+                                            <div class="mb-3">
+                                                <h6 class="text-muted">Processing Time</h6>
+                                                <p>${result.processing_time.toFixed(2)} seconds</p>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6">
+                                            <div class="mb-3">
+                                                <h6 class="text-muted">Worker</h6>
+                                                <p>${result.worker_id}</p>
+                                            </div>
+                                            
+                                            <div class="mb-3">
+                                                <h6 class="text-muted">Completed At</h6>
+                                                <p>${formatDate(result.completed_at)}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Result Data</h6>
+                                        <pre class="bg-light p-3 rounded"><code>${JSON.stringify(result.data, null, 2)}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } catch (error) {
+                        console.error('Error loading task result:', error);
+                        resultHtml = `
+                            <div class="alert alert-warning mt-4">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Could not load task result: ${error.message}
+                            </div>
+                        `;
+                    }
+                }
+                
+                const detailHtml = `
+                    <div class="card">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">Task Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">ID</h6>
+                                        <p>${task.id}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Type</h6>
+                                        <p>${task.type}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Status</h6>
+                                        <p><span class="badge bg-${getStatusBadgeClass(task.status)} status-badge">${task.status}</span></p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Plugin ID</h6>
+                                        <p>${task.plugin_id}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Worker ID</h6>
+                                        <p>${task.worker_id || 'Not assigned'}</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="col-md-6">
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Created At</h6>
+                                        <p>${formatDate(task.created_at)}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Started At</h6>
+                                        <p>${formatDate(task.started_at)}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Completed At</h6>
+                                        <p>${formatDate(task.completed_at)}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Attempt Count</h6>
+                                        <p>${task.attempt_count}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Input Data</h6>
+                                <pre class="bg-light p-3 rounded"><code>${JSON.stringify(task.input_data, null, 2)}</code></pre>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <h6 class="text-muted">Plugin Parameters</h6>
+                                <pre class="bg-light p-3 rounded"><code>${JSON.stringify(task.plugin_parameters, null, 2)}</code></pre>
+                            </div>
+                            
+                            ${task.error ? `
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Error</h6>
+                                    <div class="alert alert-danger">${task.error}</div>
+                                </div>
+                            ` : ''}
+                        </div>
+                    </div>
+                    
+                    ${resultHtml}
+                `;
+                
+                document.getElementById('task-detail-content').innerHTML = detailHtml;
+                
+                // Set the href for the "New Task" button
+                document.getElementById('new-task-btn').href = `submit-task.html?plugin_id=${task.plugin_id}`;
+                
+            } catch (error) {
+                console.error('Error loading task details:', error);
+                document.getElementById('task-detail-content').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading task details: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        function backToTaskList() {
+            document.getElementById('task-detail-container').style.display = 'none';
+            document.getElementById('task-list-container').style.display = 'block';
+            currentTaskId = '';
+        }
+        
+        // Initialize
+        document.addEventListener('DOMContentLoaded', () => {
+            // Parse URL parameters
+            const urlParams = new URLSearchParams(window.location.search);
+            currentStatus = urlParams.get('status') || '';
+            
+            // Update status filter
+            if (currentStatus) {
+                document.getElementById('status-filter').value = currentStatus;
+                
+                // Update action button based on status
+                const actionBtn = document.getElementById('action-btn');
+                if (currentStatus === 'completed') {
+                    actionBtn.innerHTML = '<i class="fas fa-chart-bar"></i> Show Results';
+                    actionBtn.classList.remove('btn-outline-primary');
+                    actionBtn.classList.add('btn-outline-info');
+                } else {
+                    actionBtn.innerHTML = '<i class="fas fa-plus"></i> New Task';
+                    actionBtn.classList.remove('btn-outline-info');
+                    actionBtn.classList.add('btn-outline-primary');
+                }
+            }
+            
+            // Load tasks
+            loadTasks();
+            
+            // Add event listeners
+            document.getElementById('refresh-btn').addEventListener('click', () => {
+                loadTasks();
+            });
+            
+            document.getElementById('back-btn').addEventListener('click', () => {
+                backToTaskList();
+            });
+            
+            document.getElementById('back-to-tasks').addEventListener('click', (e) => {
+                e.preventDefault();
+                backToTaskList();
+            });
+            
+            document.getElementById('refresh-detail-btn').addEventListener('click', () => {
+                if (currentTaskId) {
+                    loadTaskDetails();
+                }
+            });
+            
+            document.getElementById('status-filter').addEventListener('change', (e) => {
+                currentStatus = e.target.value;
+                currentPage = 1;
+                
+                // Update action button based on status
+                const actionBtn = document.getElementById('action-btn');
+                if (currentStatus === 'completed') {
+                    actionBtn.innerHTML = '<i class="fas fa-chart-bar"></i> Show Results';
+                    actionBtn.classList.remove('btn-outline-primary');
+                    actionBtn.classList.add('btn-outline-info');
+                } else {
+                    actionBtn.innerHTML = '<i class="fas fa-plus"></i> New Task';
+                    actionBtn.classList.remove('btn-outline-info');
+                    actionBtn.classList.add('btn-outline-primary');
+                }
+                
+                loadTasks();
+                
+                // Update URL
+                const url = new URL(window.location);
+                if (currentStatus) {
+                    url.searchParams.set('status', currentStatus);
+                } else {
+                    url.searchParams.delete('status');
+                }
+                window.history.pushState({}, '', url);
+            });
+            
+            document.getElementById('type-filter').addEventListener('change', (e) => {
+                currentType = e.target.value;
+                currentPage = 1;
+                loadTasks();
+            });
+            
+            document.getElementById('search-btn').addEventListener('click', () => {
+                currentSearch = document.getElementById('search-input').value;
+                currentPage = 1;
+                loadTasks();
+            });
+            
+            document.getElementById('search-input').addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    currentSearch = e.target.value;
+                    currentPage = 1;
+                    loadTasks();
+                }
+            });
+            
+            // Action button handler
+            document.getElementById('action-btn').addEventListener('click', () => {
+                if (currentStatus === 'completed') {
+                    // Show first task result if in completed tasks view
+                    const firstTaskRow = document.querySelector('.task-row');
+                    if (firstTaskRow) {
+                        const taskId = firstTaskRow.getAttribute('data-task-id');
+                        viewTaskDetails(taskId);
+                    } else {
+                        showFlashMessage('No completed tasks found to show results for.', 'warning');
+                    }
+                } else {
+                    // Navigate to new task page
+                    window.location.href = 'plugins.html';
+                }
+            });
+            
+            // Add event delegation for show-results buttons
+            document.getElementById('tasks-table-body').addEventListener('click', (e) => {
+                if (e.target.closest('.show-results-btn')) {
+                    const taskId = e.target.closest('.show-results-btn').getAttribute('data-task-id');
+                    viewTaskDetails(taskId);
+                }
+            });
+        });
+    </script>

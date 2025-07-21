@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Distributed Task Processing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+            width: 240px; /* Fixed width */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px; /* This should match the sidebar width */
+            padding: 20px;
+            flex: 1;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .status-card {
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+        }
+        .status-card:hover {
+            transform: translateY(-5px);
+        }
+        .flash-messages {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+        #content-container {
+            min-height: 500px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="#" data-page="dashboard">Task Processing System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="dashboard">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="tasks">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="workers">Workers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#" data-page="plugins">Plugins</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="dashboard">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="">
+                                <i class="fas fa-tasks me-2"></i>
+                                All Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="pending">
+                                <i class="fas fa-clock me-2"></i>
+                                Pending Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="in_process">
+                                <i class="fas fa-spinner me-2"></i>
+                                In-Process Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="completed">
+                                <i class="fas fa-check-circle me-2"></i>
+                                Completed Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="failed">
+                                <i class="fas fa-times-circle me-2"></i>
+                                Failed Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="tasks" data-status="manual_review">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                Manual Review
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="#" data-page="workers" data-status="">
+                                <i class="fas fa-server me-2"></i>
+                                All Workers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="workers" data-status="active">
+                                <i class="fas fa-play-circle me-2"></i>
+                                Active Workers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="workers" data-status="idle">
+                                <i class="fas fa-pause-circle me-2"></i>
+                                Idle Workers
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="workers" data-status="offline">
+                                <i class="fas fa-stop-circle me-2"></i>
+                                Offline Workers
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="#" data-page="plugins">
+                                <i class="fas fa-puzzle-piece me-2"></i>
+                                Plugins
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="#" data-page="register-plugin">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Register Plugin
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Flash messages -->
+                <div class="flash-messages" id="flash-messages">
+                    <!-- Flash messages will be dynamically added here -->
+                </div>
+
+                <!-- Page content -->
+                <div id="content-container">
+                    <!-- Content will be loaded here dynamically -->
+                    <div id="loading" class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Global state
+        const state = {
+            currentPage: 'dashboard',
+            currentStatus: '',
+            currentId: '',
+            flashMessages: []
+        };
+        
+        // Helper functions
+        function showLoading() {
+            document.getElementById('loading').classList.remove('hidden');
+        }
+        
+        function hideLoading() {
+            document.getElementById('loading').classList.add('hidden');
+        }
+        
+        function showFlashMessage(message, category = 'info') {
+            const flashContainer = document.getElementById('flash-messages');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${category} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            flashContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.classList.remove('show');
+                    setTimeout(() => alertElement.remove(), 150);
+                }
+            }, 5000);
+        }
+        
+        // API functions
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                showFlashMessage(error.message, 'danger');
+                throw error;
+            }
+        }
+        
+        // Page loading functions
+        async function loadDashboard() {
+            showLoading();
+            try {
+                const status = await fetchAPI('/status');
+                
+                const html = `
+                    <div class="container mt-4">
+                        <h1 class="mb-4">Dashboard</h1>
+                        
+                        <div class="row">
+                            <div class="col-md-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Task Status</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="taskChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-4">
+                                <div class="card">
+                                    <div class="card-header">
+                                        <h5 class="card-title mb-0">Worker Status</h5>
+                                    </div>
+                                    <div class="card-body">
+                                        <canvas id="workerChart"></canvas>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4 mb-4">
+                                <div class="card status-card bg-primary text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Pending Tasks</h5>
+                                        <h2 class="display-4">${status.tasks.pending}</h2>
+                                        <p class="card-text">Tasks waiting to be processed</p>
+                                        <a href="#" class="btn btn-light" data-page="tasks" data-status="pending">View Tasks</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card status-card bg-success text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Active Workers</h5>
+                                        <h2 class="display-4">${status.workers.active}</h2>
+                                        <p class="card-text">Workers currently processing tasks</p>
+                                        <a href="#" class="btn btn-light" data-page="workers" data-status="active">View Workers</a>
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4 mb-4">
+                                <div class="card status-card bg-info text-white">
+                                    <div class="card-body">
+                                        <h5 class="card-title">Plugins</h5>
+                                        <h2 class="display-4">${status.plugins}</h2>
+                                        <p class="card-text">Registered plugins</p>
+                                        <a href="#" class="btn btn-light" data-page="plugins">View Plugins</a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('content-container').innerHTML = html;
+                
+                // Initialize charts
+                initTaskChart(status.tasks);
+                initWorkerChart(status.workers);
+                
+                // Add event listeners to the buttons
+                document.querySelectorAll('[data-page]').forEach(el => {
+                    el.addEventListener('click', handleNavigation);
+                });
+                
+            } catch (error) {
+                console.error('Error loading dashboard:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function initTaskChart(taskData) {
+            const ctx = document.getElementById('taskChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Pending', 'In Process', 'Completed', 'Failed', 'Manual Review'],
+                    datasets: [{
+                        data: [
+                            taskData.pending,
+                            taskData.in_process,
+                            taskData.completed,
+                            taskData.failed,
+                            taskData.manual_review
+                        ],
+                        backgroundColor: [
+                            '#007bff',
+                            '#ffc107',
+                            '#28a745',
+                            '#dc3545',
+                            '#6c757d'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        function initWorkerChart(workerData) {
+            const ctx = document.getElementById('workerChart').getContext('2d');
+            
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: ['Active', 'Idle', 'Offline'],
+                    datasets: [{
+                        data: [
+                            workerData.active,
+                            workerData.idle,
+                            workerData.offline
+                        ],
+                        backgroundColor: [
+                            '#28a745',
+                            '#ffc107',
+                            '#6c757d'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom'
+                        }
+                    }
+                }
+            });
+        }
+        
+        async function loadTasks(status = '') {
+            showLoading();
+            try {
+                let endpoint = '/tasks';
+                if (status) {
+                    endpoint += `?status=${status}`;
+                }
+                
+                const tasks = await fetchAPI(endpoint);
+                
+                let statusText = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'All';
+                
+                const html = `
+                    <div class="container mt-4">
+                        <h1 class="mb-4">${statusText} Tasks</h1>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Type</th>
+                                                <th>Status</th>
+                                                <th>Plugin</th>
+                                                <th>Created</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${tasks.length > 0 ? tasks.map(task => `
+                                                <tr>
+                                                    <td>${task.id}</td>
+                                                    <td>${task.type}</td>
+                                                    <td>
+                                                        <span class="badge bg-${getStatusBadgeClass(task.status)}">${task.status}</span>
+                                                    </td>
+                                                    <td>${task.plugin_id}</td>
+                                                    <td>${new Date(task.created_at).toLocaleString()}</td>
+                                                    <td>
+                                                        <a href="#" class="btn btn-sm btn-outline-primary" data-page="task-detail" data-id="${task.id}">
+                                                            <i class="fas fa-info-circle"></i> Details
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            `).join('') : `
+                                                <tr>
+                                                    <td colspan="6" class="text-center">No tasks found</td>
+                                                </tr>
+                                            `}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('content-container').innerHTML = html;
+                
+                // Add event listeners to the buttons
+                document.querySelectorAll('[data-page]').forEach(el => {
+                    el.addEventListener('click', handleNavigation);
+                });
+                
+            } catch (error) {
+                console.error('Error loading tasks:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function getStatusBadgeClass(status) {
+            switch (status) {
+                case 'pending': return 'primary';
+                case 'in_process': return 'warning';
+                case 'completed': return 'success';
+                case 'failed': return 'danger';
+                case 'manual_review': return 'secondary';
+                default: return 'info';
+            }
+        }
+        
+        async function loadTaskDetail(taskId) {
+            showLoading();
+            try {
+                const task = await fetchAPI(`/tasks/${taskId}`);
+                
+                let resultHtml = '';
+                if (task.status === 'completed' || task.status === 'failed') {
+                    try {
+                        const result = await fetchAPI(`/results/${taskId}`);
+                        resultHtml = `
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Task Result</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Success</h6>
+                                        <p>${result.success ? '<span class="badge bg-success">Yes</span>' : '<span class="badge bg-danger">No</span>'}</p>
+                                    </div>
+                                    
+                                    ${result.error ? `
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Error</h6>
+                                            <div class="alert alert-danger">${result.error}</div>
+                                        </div>
+                                    ` : ''}
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Processing Time</h6>
+                                        <p>${result.processing_time.toFixed(2)} seconds</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Worker</h6>
+                                        <p>${result.worker_id}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Completed At</h6>
+                                        <p>${new Date(result.completed_at).toLocaleString()}</p>
+                                    </div>
+                                    
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Result Data</h6>
+                                        <pre class="bg-light p-3 rounded"><code>${JSON.stringify(result.data, null, 2)}</code></pre>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                    } catch (error) {
+                        console.error('Error loading task result:', error);
+                    }
+                }
+                
+                const html = `
+                    <div class="container mt-4">
+                        <nav aria-label="breadcrumb">
+                            <ol class="breadcrumb">
+                                <li class="breadcrumb-item"><a href="#" data-page="tasks">Tasks</a></li>
+                                <li class="breadcrumb-item active" aria-current="page">Task Details</li>
+                            </ol>
+                        </nav>
+                        
+                        <div class="d-flex justify-content-between align-items-center mb-4">
+                            <h1>Task Details</h1>
+                            <div>
+                                <a href="#" class="btn btn-outline-secondary" data-page="tasks">
+                                    <i class="fas fa-arrow-left"></i> Back to Tasks
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <div class="card">
+                            <div class="card-header">
+                                <h5 class="card-title mb-0">Task Information</h5>
+                            </div>
+                            <div class="card-body">
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">ID</h6>
+                                            <p>${task.id}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Type</h6>
+                                            <p>${task.type}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Status</h6>
+                                            <p><span class="badge bg-${getStatusBadgeClass(task.status)}">${task.status}</span></p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Plugin ID</h6>
+                                            <p>${task.plugin_id}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Worker ID</h6>
+                                            <p>${task.worker_id || 'Not assigned'}</p>
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="col-md-6">
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Created At</h6>
+                                            <p>${new Date(task.created_at).toLocaleString()}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Started At</h6>
+                                            <p>${task.started_at ? new Date(task.started_at).toLocaleString() : 'Not started'}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Completed At</h6>
+                                            <p>${task.completed_at ? new Date(task.completed_at).toLocaleString() : 'Not completed'}</p>
+                                        </div>
+                                        
+                                        <div class="mb-3">
+                                            <h6 class="text-muted">Attempt Count</h6>
+                                            <p>${task.attempt_count}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Input Data</h6>
+                                    <pre class="bg-light p-3 rounded"><code>${JSON.stringify(task.input_data, null, 2)}</code></pre>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <h6 class="text-muted">Plugin Parameters</h6>
+                                    <pre class="bg-light p-3 rounded"><code>${JSON.stringify(task.plugin_parameters, null, 2)}</code></pre>
+                                </div>
+                                
+                                ${task.error ? `
+                                    <div class="mb-3">
+                                        <h6 class="text-muted">Error</h6>
+                                        <div class="alert alert-danger">${task.error}</div>
+                                    </div>
+                                ` : ''}
+                            </div>
+                        </div>
+                        
+                        ${resultHtml}
+                    </div>
+                `;
+                
+                document.getElementById('content-container').innerHTML = html;
+                
+                // Add event listeners to the buttons
+                document.querySelectorAll('[data-page]').forEach(el => {
+                    el.addEventListener('click', handleNavigation);
+                });
+                
+            } catch (error) {
+                console.error('Error loading task detail:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        async function loadWorkers(status = '') {
+            showLoading();
+            try {
+                let endpoint = '/workers';
+                if (status) {
+                    endpoint += `?status=${status}`;
+                }
+                
+                const workers = await fetchAPI(endpoint);
+                
+                let statusText = status ? status.charAt(0).toUpperCase() + status.slice(1) : 'All';
+                
+                const html = `
+                    <div class="container mt-4">
+                        <h1 class="mb-4">${statusText} Workers</h1>
+                        
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="table-responsive">
+                                    <table class="table table-striped table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>ID</th>
+                                                <th>Hostname</th>
+                                                <th>IP</th>
+                                                <th>Status</th>
+                                                <th>Active Tasks</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${workers.length > 0 ? workers.map(worker => `
+                                                <tr>
+                                                    <td>${worker.id}</td>
+                                                    <td>${worker.hostname}</td>
+                                                    <td>${worker.ip}</td>
+                                                    <td>
+                                                        <span class="badge bg-${getWorkerStatusBadgeClass(worker.status)}">${worker.status}</span>
+                                                    </td>
+                                                    <td>${worker.active_tasks.length}</td>
+                                                    <td>
+                                                        <a href="#" class="btn btn-sm btn-outline-primary" data-page="worker-detail" data-id="${worker.id}">
+                                                            <i class="fas fa-info-circle"></i> Details
+                                                        </a>
+                                                    </td>
+                                                </tr>
+                                            `).join('') : `
+                                                <tr>
+                                                    <td colspan="6" class="text-center">No workers found</td>
+                                                </tr>
+                                            `}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('content-container').innerHTML = html;
+                
+                // Add event listeners to the buttons
+                document.querySelectorAll('[data-page]').forEach(el => {
+                    el.addEventListener('click', handleNavigation);
+                });
+                
+            } catch (error) {
+                console.error('Error loading workers:', error);
+            } finally {
+                hideLoading();
+            }
+        }
+        
+        function getWorkerStatusBadgeClass(status) {
+            switch (status) {
+                case 'active': return 'success';
+                case 'idle': return 'warning';
+                case 'offline': return 'secondary';
+                default: return 'info';
+            }
+        }
+        
+        async function loadWorkerDetail(workerId) {
+            showLoading();
+            try {
+                const worker = await fetchAPI(`/workers/${workerId}`);
+                
+                let metricsHtml = '';
+                try {
+                    const metrics = await fetchAPI(`/metrics/worker/${workerId}`);
+                    if (metrics.length > 0) {
+                        metricsHtml = `
+                            <div class="card mt-4">
+                                <div class="card-header">
+                                    <h5 class="card-title mb-0">Worker Metrics</h5>

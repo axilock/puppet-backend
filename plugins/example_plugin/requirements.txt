@@ -1,0 +1,2 @@
+# No external dependencies for this simple plugin
+# For more complex plugins, list dependencies here

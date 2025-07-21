@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Plugins - Distributed Task Processing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+            width: 240px; /* Fixed width */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px; /* This should match the sidebar width */
+            padding: 20px;
+            flex: 1;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .flash-messages {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Task Processing System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="tasks.html">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="workers.html">Workers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="plugins.html">Plugins</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html">
+                                <i class="fas fa-tasks me-2"></i>
+                                All Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="workers.html">
+                                <i class="fas fa-server me-2"></i>
+                                All Workers
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link active" href="plugins.html">
+                                <i class="fas fa-puzzle-piece me-2"></i>
+                                Plugins
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="register-plugin.html">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Register Plugin
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Flash messages -->
+                <div class="flash-messages" id="flash-messages">
+                    <!-- Flash messages will be dynamically added here -->
+                </div>
+
+                <!-- Page content -->
+                <div class="container mt-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Plugins</h1>
+                        <a href="register-plugin.html" class="btn btn-primary">
+                            <i class="fas fa-plus"></i> Register New Plugin
+                        </a>
+                    </div>
+                    
+                    <div id="plugins-container">
+                        <div class="text-center p-5">
+                            <div class="spinner-border text-primary" role="status">
+                                <span class="visually-hidden">Loading...</span>
+                            </div>
+                            <p class="mt-2">Loading plugins...</p>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Plugin Detail Modal -->
+    <div class="modal fade" id="pluginDetailModal" tabindex="-1" aria-labelledby="pluginDetailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="pluginDetailModalLabel">Plugin Details</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="pluginDetailModalBody">
+                    <!-- Plugin details will be loaded here -->
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <a href="#" class="btn btn-primary" id="submitTaskBtn">Submit Task</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Helper functions
+        function showFlashMessage(message, category = 'info') {
+            const flashContainer = document.getElementById('flash-messages');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${category} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            flashContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.classList.remove('show');
+                    setTimeout(() => alertElement.remove(), 150);
+                }
+            }, 5000);
+        }
+        
+        // API functions
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                showFlashMessage(error.message, 'danger');
+                throw error;
+            }
+        }
+        
+        // Load plugins
+        async function loadPlugins() {
+            try {
+                const plugins = await fetchAPI('/plugins');
+                
+                if (plugins.length === 0) {
+                    document.getElementById('plugins-container').innerHTML = `
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i> No plugins registered yet. 
+                            <a href="register-plugin.html" class="alert-link">Register your first plugin</a>.
+                        </div>
+                    `;
+                    return;
+                }
+                
+                const pluginsHtml = `
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        ${plugins.map(plugin => `
+                            <div class="col">
+                                <div class="card h-100 shadow-sm">
+                                    <div class="card-body">
+                                        <h5 class="card-title">${plugin.name}</h5>
+                                        <h6 class="card-subtitle mb-2 text-muted">${plugin.id} (v${plugin.version})</h6>
+                                        <p class="card-text">${plugin.description}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <span class="badge bg-info">${plugin.queue || 'No queue specified'}</span>
+                                            <small class="text-muted">${plugin.parameters ? plugin.parameters.length : 0} parameter(s)</small>
+                                        </div>
+                                    </div>
+                                    <div class="card-footer bg-transparent">
+                                        <div class="btn-group">
+                                            <button type="button" class="btn btn-sm btn-outline-primary view-details" data-plugin-id="${plugin.id}">
+                                                <i class="fas fa-info-circle"></i> View Details
+                                            </button>
+                                            <a href="submit-task.html?plugin_id=${plugin.id}" class="btn btn-sm btn-outline-success">
+                                                <i class="fas fa-plus"></i> New Task
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
+                
+                document.getElementById('plugins-container').innerHTML = pluginsHtml;
+                
+                // Add event listeners to the view details buttons
+                document.querySelectorAll('.view-details').forEach(button => {
+                    button.addEventListener('click', () => {
+                        const pluginId = button.getAttribute('data-plugin-id');
+                        showPluginDetails(pluginId);
+                    });
+                });
+                
+            } catch (error) {
+                console.error('Error loading plugins:', error);
+                document.getElementById('plugins-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading plugins: ${error.message}
+                    </div>
+                `;
+            }
+        }
+        
+        // Show plugin details
+        async function showPluginDetails(pluginId) {
+            try {
+                const plugin = await fetchAPI(`/plugins/${pluginId}`);
+                
+                const parametersHtml = plugin.parameters && plugin.parameters.length > 0 ? `
+                    <div class="accordion mt-3" id="parametersAccordion">
+                        ${plugin.parameters.map((param, index) => `
+                            <div class="accordion-item">
+                                <h2 class="accordion-header" id="heading${index}">
+                                    <button class="accordion-button ${index !== 0 ? 'collapsed' : ''}" type="button" data-bs-toggle="collapse" data-bs-target="#collapse${index}" aria-expanded="${index === 0 ? 'true' : 'false'}" aria-controls="collapse${index}">
+                                        ${param.name}
+                                        ${param.required ? '<span class="badge bg-danger ms-2">Required</span>' : ''}
+                                    </button>
+                                </h2>
+                                <div id="collapse${index}" class="accordion-collapse collapse ${index === 0 ? 'show' : ''}" aria-labelledby="heading${index}" data-bs-parent="#parametersAccordion">
+                                    <div class="accordion-body">
+                                        <div class="mb-2">
+                                            <strong>Type:</strong> ${param.type}
+                                        </div>
+                                        ${param.description ? `
+                                            <div class="mb-2">
+                                                <strong>Description:</strong> ${param.description}
+                                            </div>
+                                        ` : ''}
+                                        ${param.default !== undefined ? `
+                                            <div class="mb-2">
+                                                <strong>Default:</strong> 
+                                                ${param.type === 'object' || param.type === 'array' ? `
+                                                    <pre class="mb-0"><code>${JSON.stringify(param.default, null, 2)}</code></pre>
+                                                ` : param.default}
+                                            </div>
+                                        ` : ''}
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                ` : '<p class="text-muted">No parameters defined for this plugin.</p>';
+                
+                const modalContent = `
+                    <div class="mb-3">
+                        <h6 class="text-muted">ID</h6>
+                        <p>${plugin.id}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Version</h6>
+                        <p>${plugin.version}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Docker Image</h6>
+                        <p>${plugin.docker_image}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Queue</h6>
+                        <p>${plugin.queue || 'No queue specified'}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Description</h6>
+                        <p>${plugin.description}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Created At</h6>
+                        <p>${new Date(plugin.created_at).toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Updated At</h6>
+                        <p>${new Date(plugin.updated_at).toLocaleString()}</p>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h6 class="text-muted">Parameters</h6>
+                        ${parametersHtml}
+                    </div>
+                    
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5 class="card-title mb-0">API Usage</h5>
+                        </div>
+                        <div class="card-body">
+                            <p>To use this plugin via the API, send a POST request to <code>/api/tasks</code> with the following JSON payload:</p>
+                            <pre><code>{
+  "type": "${plugin.queue || 'example_queue'}",
+  "data": {
+    "domain": "example.com"
+    // Add your input data here
+  },
+  "plugin_id": "${plugin.id}",
+  "plugin_parameters": {
+    ${plugin.parameters && plugin.parameters.length > 0 ? plugin.parameters.map(param => `
+    "${param.name}": ${param.default !== undefined ? JSON.stringify(param.default) : '"value"'}
+    `).join(',') : '// Add your parameters here'}
+  }
+}</code></pre>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('pluginDetailModalLabel').textContent = plugin.name;
+                document.getElementById('pluginDetailModalBody').innerHTML = modalContent;
+                document.getElementById('submitTaskBtn').href = `submit-task.html?plugin_id=${plugin.id}`;
+                
+                // Show the modal
+                const modal = new bootstrap.Modal(document.getElementById('pluginDetailModal'));
+                modal.show();
+                
+            } catch (error) {
+                console.error('Error loading plugin details:', error);
+                showFlashMessage(`Error loading plugin details: ${error.message}`, 'danger');
+            }
+        }
+        
+        // Load plugins when page loads
+        document.addEventListener('DOMContentLoaded', loadPlugins);
+    </script>
+</body>
+</html>

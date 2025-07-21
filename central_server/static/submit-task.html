@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Submit Task - Distributed Task Processing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+            width: 240px; /* Fixed width */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px; /* This should match the sidebar width */
+            padding: 20px;
+            flex: 1;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .flash-messages {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Task Processing System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="tasks.html">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="workers.html">Workers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="plugins.html">Plugins</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html">
+                                <i class="fas fa-tasks me-2"></i>
+                                All Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="workers.html">
+                                <i class="fas fa-server me-2"></i>
+                                All Workers
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="plugins.html">
+                                <i class="fas fa-puzzle-piece me-2"></i>
+                                Plugins
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="register-plugin.html">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Register Plugin
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Flash messages -->
+                <div class="flash-messages" id="flash-messages">
+                    <!-- Flash messages will be dynamically added here -->
+                </div>
+
+                <!-- Page content -->
+                <div class="container mt-4" id="content-container">
+                    <div class="text-center p-5">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading plugin details...</p>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Helper functions
+        function showFlashMessage(message, category = 'info') {
+            const flashContainer = document.getElementById('flash-messages');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${category} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            flashContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.classList.remove('show');
+                    setTimeout(() => alertElement.remove(), 150);
+                }
+            }, 5000);
+        }
+        
+        // API functions
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                showFlashMessage(error.message, 'danger');
+                throw error;
+            }
+        }
+        
+        // Get plugin ID from URL
+        function getPluginIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('plugin_id');
+        }
+        
+        // Load plugin details and create form
+        async function loadPluginAndCreateForm() {
+            const pluginId = getPluginIdFromUrl();
+            
+            if (!pluginId) {
+                document.getElementById('content-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        No plugin ID provided. Please select a plugin from the <a href="plugins.html">plugins page</a>.
+                    </div>
+                `;
+                return;
+            }
+            
+            try {
+                const plugin = await fetchAPI(`/plugins/${pluginId}`);
+                
+                // Create breadcrumb and title
+                const headerHtml = `
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="plugins.html">Plugins</a></li>
+                            <li class="breadcrumb-item"><a href="plugins.html" onclick="showPluginDetails('${plugin.id}'); return false;">${plugin.name}</a></li>
+                            <li class="breadcrumb-item active" aria-current="page">Submit Task</li>
+                        </ol>
+                    </nav>
+                    
+                    <div class="d-flex justify-content-between align-items-center mb-4">
+                        <h1>Submit Task using ${plugin.name}</h1>
+                        <div>
+                            <a href="plugins.html" class="btn btn-outline-secondary me-2">
+                                <i class="fas fa-arrow-left"></i> Back to Plugins
+                            </a>
+                        </div>
+                    </div>
+                `;
+                
+                // Create form for task data and parameters
+                const formHtml = `
+                    <div class="card">
+                        <div class="card-body">
+                            <form id="taskForm">
+                                <div class="mb-3">
+                                    <label for="task_data" class="form-label">Task Data (JSON)</label>
+                                    <textarea class="form-control" id="task_data" name="task_data" rows="5" required>{"domain": "example.com"}</textarea>
+                                    <div class="form-text">Input data for the task in JSON format</div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fas fa-play"></i> Submit Task
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                `;
+                
+                document.getElementById('content-container').innerHTML = headerHtml + formHtml;
+                
+                // Add form submission handler
+                document.getElementById('taskForm').addEventListener('submit', async function(event) {
+                    event.preventDefault();
+                    
+                    try {
+                        // Validate JSON input
+                        const taskDataInput = document.getElementById('task_data');
+                        let taskData;
+                        try {
+                            taskData = JSON.parse(taskDataInput.value);
+                        } catch (e) {
+                            showFlashMessage('Task data must be valid JSON. Error: ' + e.message, 'danger');
+                            return;
+                        }
+                        
+                        // Gather parameters
+                        const pluginParameters = {};
+                        
+                        if (plugin.parameters) {
+                            for (const param of plugin.parameters) {
+                                const paramInput = document.getElementById(`param_${param.name}`);
+                                
+                                if (paramInput && paramInput.value) {
+                                    // Convert parameter value based on type
+                                    if (param.type === 'number') {
+                                        pluginParameters[param.name] = Number(paramInput.value);
+                                    } else if (param.type === 'boolean') {
+                                        pluginParameters[param.name] = paramInput.value.toLowerCase() === 'true';
+                                    } else if (param.type === 'object' || param.type === 'array') {
+                                        try {
+                                            pluginParameters[param.name] = JSON.parse(paramInput.value);
+                                        } catch (e) {
+                                            showFlashMessage(`Parameter ${param.name} must be valid JSON. Error: ${e.message}`, 'danger');
+                                            return;
+                                        }
+                                    } else {
+                                        pluginParameters[param.name] = paramInput.value;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        // Create task input
+                        const taskInput = {
+                            type: plugin.queue || 'default',
+                            data: taskData,
+                            plugin_id: plugin.id,
+                            plugin_parameters: pluginParameters
+                        };
+                        
+                        // Submit task
+                        const result = await fetchAPI('/tasks', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json'
+                            },
+                            body: JSON.stringify(taskInput)
+                        });
+                        
+                        showFlashMessage(`Task submitted successfully. Task ID: ${result.task_id}`, 'success');
+                        
+                        // Redirect to task detail page after a delay
+                        setTimeout(() => {
+                            window.location.href = `task-detail.html?task_id=${result.task_id}`;
+                        }, 2000);
+                        
+                    } catch (error) {
+                        console.error('Error submitting task:', error);
+                    }
+                });
+                
+            } catch (error) {
+                console.error('Error loading plugin:', error);
+                document.getElementById('content-container').innerHTML = `
+                    <div class="alert alert-danger">
+                        <i class="fas fa-exclamation-triangle me-2"></i>
+                        Error loading plugin: ${error.message}
+                    </div>
+                    <div class="text-center mt-3">
+                        <a href="plugins.html" class="btn btn-primary">Back to Plugins</a>
+                    </div>
+                `;
+            }
+        }
+        
+        // Load plugin and create form when page loads
+        document.addEventListener('DOMContentLoaded', loadPluginAndCreateForm);
+    </script>
+</body>
+</html>

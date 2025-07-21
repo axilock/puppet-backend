@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Register Plugin - Distributed Task Processing System</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <style>
+        body {
+            padding-top: 56px;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+        .sidebar {
+            top: 56px;
+            bottom: 0;
+            left: 0;
+            z-index: 100;
+            padding: 48px 0 0;
+            box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+            background-color: #f8f9fa;
+            width: 240px; /* Fixed width */
+        }
+        .sidebar-sticky {
+            position: relative;
+            top: 0;
+            height: calc(100vh - 48px);
+            padding-top: .5rem;
+            overflow-x: hidden;
+            overflow-y: auto;
+        }
+        .main-content {
+            margin-left: 240px; /* This should match the sidebar width */
+            padding: 20px;
+            flex: 1;
+        }
+        @media (max-width: 767.98px) {
+            .sidebar {
+                top: 5rem;
+            }
+            .main-content {
+                margin-left: 0;
+            }
+        }
+        .nav-link {
+            font-weight: 500;
+            color: #333;
+        }
+        .nav-link.active {
+            color: #007bff;
+        }
+        .flash-messages {
+            position: fixed;
+            top: 70px;
+            right: 20px;
+            z-index: 1000;
+            max-width: 400px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-md navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <a class="navbar-brand" href="index.html">Task Processing System</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarCollapse">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarCollapse">
+                <ul class="navbar-nav me-auto mb-2 mb-md-0">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">Dashboard</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="tasks.html">Tasks</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="workers.html">Workers</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="plugins.html">Plugins</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container-fluid">
+        <div class="row">
+            <!-- Sidebar -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block sidebar collapse">
+                <div class="position-sticky sidebar-sticky">
+                    <ul class="nav flex-column">
+                        <li class="nav-item">
+                            <a class="nav-link" href="index.html">
+                                <i class="fas fa-tachometer-alt me-2"></i>
+                                Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="tasks.html">
+                                <i class="fas fa-tasks me-2"></i>
+                                All Tasks
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="workers.html">
+                                <i class="fas fa-server me-2"></i>
+                                All Workers
+                            </a>
+                        </li>
+                        <li class="nav-item mt-3">
+                            <a class="nav-link" href="plugins.html">
+                                <i class="fas fa-puzzle-piece me-2"></i>
+                                Plugins
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link active" href="register-plugin.html">
+                                <i class="fas fa-plus-circle me-2"></i>
+                                Register Plugin
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+            </nav>
+
+            <!-- Main content -->
+            <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content">
+                <!-- Flash messages -->
+                <div class="flash-messages" id="flash-messages">
+                    <!-- Flash messages will be dynamically added here -->
+                </div>
+
+                <!-- Page content -->
+                <div class="container mt-4">
+                    <h1 class="mb-4">Register New Plugin</h1>
+                    
+                    <div class="card">
+                        <div class="card-body">
+                            <form id="pluginForm">
+                                <div class="alert alert-info">
+                                    <i class="fas fa-info-circle"></i> Create you plugin. refer readme how to create plugin
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="name" class="form-label">Plugin Name *</label>
+                                    <input type="text" class="form-control" id="name" name="name" required>
+                                    <div class="form-text">Human-readable name of the plugin</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="version" class="form-label">Version *</label>
+                                    <input type="text" class="form-control" id="version" name="version" placeholder="1.0.0" required>
+                                    <div class="form-text">Semantic version of the plugin</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="docker_image" class="form-label">Docker Image *</label>
+                                    <input type="text" class="form-control" id="docker_image" name="docker_image" placeholder="example-plugin:1.0.0" required>
+                                    <div class="form-text">Docker image name and tag</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="description" class="form-label">Description *</label>
+                                    <textarea class="form-control" id="description" name="description" rows="3" required></textarea>
+                                    <div class="form-text">Description of what the plugin does</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="queue" class="form-label">Queue</label>
+                                    <input type="text" class="form-control" id="queue" name="queue" placeholder="example_queue">
+                                    <div class="form-text">Queue name this plugin processes tasks from</div>
+                                </div>
+                                
+                                <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                    <a href="plugins.html" class="btn btn-secondary me-md-2">Cancel</a>
+                                    <button type="submit" class="btn btn-primary">Register Plugin</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <!-- Parameter template (hidden) -->
+    <template id="parameter-template">
+        <div class="card mb-3 parameter-card">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Parameter</h5>
+                    <button type="button" class="btn btn-sm btn-outline-danger remove-parameter">
+                        <i class="fas fa-trash"></i> Remove
+                    </button>
+                </div>
+                
+                <div class="row g-3">
+                    <div class="col-md-6">
+                        <label class="form-label">Name *</label>
+                        <input type="text" class="form-control param-name" required>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Type *</label>
+                        <select class="form-select param-type" required>
+                            <option value="string">String</option>
+                            <option value="number">Number</option>
+                            <option value="boolean">Boolean</option>
+                            <option value="array">Array</option>
+                            <option value="object">Object</option>
+                        </select>
+                    </div>
+                    
+                    <div class="col-md-12">
+                        <label class="form-label">Description</label>
+                        <input type="text" class="form-control param-description">
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="form-check mt-2">
+                            <input class="form-check-input param-required" type="checkbox" value="true">
+                            <label class="form-check-label">Required</label>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <label class="form-label">Default Value</label>
+                        <input type="text" class="form-control param-default">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </template>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    
+    <script>
+        // API Configuration
+        const API_BASE_URL = 'http://localhost:8000/api';
+        
+        // Helper functions
+        function showFlashMessage(message, category = 'info') {
+            const flashContainer = document.getElementById('flash-messages');
+            const alertId = 'alert-' + Date.now();
+            
+            const alertHtml = `
+                <div id="${alertId}" class="alert alert-${category} alert-dismissible fade show" role="alert">
+                    ${message}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            `;
+            
+            flashContainer.insertAdjacentHTML('beforeend', alertHtml);
+            
+            // Auto-hide after 5 seconds
+            setTimeout(() => {
+                const alertElement = document.getElementById(alertId);
+                if (alertElement) {
+                    alertElement.classList.remove('show');
+                    setTimeout(() => alertElement.remove(), 150);
+                }
+            }, 5000);
+        }
+        
+        // API functions
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.detail || `API request failed with status ${response.status}`);
+                }
+                
+                return await response.json();
+            } catch (error) {
+                showFlashMessage(error.message, 'danger');
+                throw error;
+            }
+        }
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            
+            const addParameterButton = document.getElementById('add-parameter');
+            const pluginForm = document.getElementById('pluginForm');
+            
+            
+            // Form submission
+            pluginForm.addEventListener('submit', async function(event) {
+                event.preventDefault();
+                
+                try {
+                    // Gather form data
+                    const name = document.getElementById('name').value;
+                    const version = document.getElementById('version').value;
+                    const docker_image = document.getElementById('docker_image').value;
+                    const description = document.getElementById('description').value;
+                    const queue = document.getElementById('queue').value;
+                    
+                    // Gather parameters
+                    const parameters = [];
+                   
+                    
+                    // Create plugin data object
+                    const pluginData = {
+                        id: "", // Empty ID will be auto-generated by the server
+                        name: name,
+                        version: version,
+                        docker_image: docker_image,
+                        description: description,
+                        parameters: parameters
+                    };
+                    
+                    // Add queue if provided
+                    if (queue) {
+                        pluginData.queue = queue;
+                    }
+                    
+                    // Submit to API
+                    const response = await fetchAPI('/plugins', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(pluginData)
+                    });
+                    
+                    // Show success message
+                    showFlashMessage(`Plugin registered successfully with ID: ${response.plugin_id}`, 'success');
+                    
+                    // Redirect to plugins page after a delay
+                    setTimeout(() => {
+                        window.location.href = 'plugins.html';
+                    }, 2000);
+                    
+                } catch (error) {
+                    console.error('Error registering plugin:', error);
+                    showFlashMessage(`Error registering plugin: ${error.message}`, 'danger');
+                }
+            });
+            
+            // Add initial parameter
+            addParameterButton.click();
+        });
+    </script>
+</body>
+</html>

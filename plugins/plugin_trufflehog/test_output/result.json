@@ -1,0 +1,5 @@
+{
+  "status": "error",
+  "error": "{\"level\":\"error\",\"ts\":\"2025-07-04T12:35:40Z\",\"logger\":\"trufflehog\",\"msg\":\"error running scan\",\"error\":\"failed to scan Github: 'git' command not found in $PATH. Make sure git is installed and included in $PATH\"}\n",
+  "exit_code": 1
+}
