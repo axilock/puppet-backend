@@ -301,13 +301,12 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
+    <!-- Config -->
+    <script src="config.js"></script>
  
     
     <script>
 
-        // API Configuration
-        const API_BASE_URL = 'http://localhost:8000/api';
-        
         // Global state
         let currentStatus = '';
         let currentSearch = '';
@@ -361,6 +360,9 @@
         // API functions
         async function fetchAPI(endpoint, options = {}) {
             try {
+                // Ensure credentials are included
+                options.credentials = 'include';
+                
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
                 
                 if (!response.ok) {

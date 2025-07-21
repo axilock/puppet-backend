@@ -316,11 +316,10 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <!-- Config -->
+    <script src="config.js"></script>
     
     <script>
-        // API Configuration
-        const API_BASE_URL = 'http://localhost:8000/api';
-        
 // Global state
 let currentPage = 1;
 let pageSize = 10;
@@ -382,6 +381,9 @@ let sortOrder = 'desc';
         // API functions
         async function fetchAPI(endpoint, options = {}) {
             try {
+                // Ensure credentials are included
+                options.credentials = 'include';
+                
                 const response = await fetch(`${API_BASE_URL}${endpoint}`, options);
                 
                 if (!response.ok) {

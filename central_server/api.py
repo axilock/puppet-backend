@@ -96,6 +96,12 @@ async def serve_html_file(filename: str, username: str = Depends(verify_auth)):
     file_path = f"{static_dir}/{filename}.html"
     return FileResponse(file_path)
 
+@app.get("/{filename}.js", response_class=FileResponse)
+async def serve_html_file(filename: str):
+    static_dir = get_static_dir()
+    file_path = f"{static_dir}/{filename}.js"
+    return FileResponse(file_path)
+
 # Task submission endpoints
 @app.post("/api/tasks", response_model=Dict[str, str])
 async def create_task(task_input: TaskInput, username: str = Depends(verify_auth)):
