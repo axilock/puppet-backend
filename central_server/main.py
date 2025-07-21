@@ -48,7 +48,6 @@ def check_redis_connection() -> bool:
     """Check if Redis is accessible."""
     try:
         # Get Redis connection parameters from Celery's broker_url
-        print( REDIS_HOST,REDIS_PORT,REDIS_DB,REDIS_PASSWORD )
         
         redis_client = redis.Redis(
             host=REDIS_HOST,
