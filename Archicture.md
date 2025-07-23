@@ -206,6 +206,3 @@ The admin dashboard provides a web interface for monitoring the system. Open a w
 http://localhost:8080
 ```
 
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
